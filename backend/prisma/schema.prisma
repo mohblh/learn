@@ -1,0 +1,329 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url = env("DATABASE_URL")
+}
+
+// =================== USERS & AUTH ==============
+
+model User {
+    id String @id @default(uuid())
+    email String @unique
+    password String
+    firstName String
+    lastName String
+    phone String?
+    role UserRole @default(CASHIER)
+    isActive Boolean @default(true)
+
+    storeId String?
+    store Store? @relation(fields: [storeId], references: [id], onDelete: Cascade) 
+
+    branchId String?
+    branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+    transactions Transaction[]
+    activities ActivityLog[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([storeId])
+    @@index([branchId])
+    @@index([email]) 
+}
+
+enum UserRole {
+    SUPER_ADMIN
+    STORE_OWNER
+    STORE_ADMIN
+    BRANCH_MANAGER
+    CASHIER
+    INVENTORY_STAFF
+}
+
+model Store {
+    id String @id @default(uuid())
+    name String
+    slug String @unique
+    email String
+    phone String
+    logo String?
+
+    subscriptionPlan SubscriptionPlan @default(BASIC)
+    subscriptionStatus SubscriptionStatus @default(TRIAL)
+    subscriptionExpiry DateTime?
+    maxBranches Int @default(1)
+    maxProducts Int @default(1000)
+
+    currency String @default("DZD")
+    timezone String @default("UTC+1")
+    taxRate Float @default(0)
+
+    branches Branch[]
+    users User[]
+    products Product[]
+    categories Category[]
+    customers Customer[]
+    suppliers Supplier[]
+
+    isActive Boolean @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([slug])
+}
+
+enum SubscriptionPlan {
+    TRIAL
+    BASIC
+    PROFESSIONAL
+    ENTREPRISE
+}
+
+enum SubscriptionStatus {
+    TRIAL
+    ACTIVE
+    EXPIRED
+    CANCELLED
+}
+
+model Branch {
+    id String @id @default(uuid())
+    name String 
+    code String
+    address String 
+    city String
+    state String?
+    zipCode String?
+    country String 
+    phone String
+    email String?
+
+    storeId String
+    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+    users User[]
+    inventory Inventory[]
+    transactions Transaction[]
+
+    isActive Boolean @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([storeId, code])
+    @@index([storeId])
+}
+
+model Category {
+    id String @id @default(uuid())
+    name String 
+    description String?
+
+    storeId String
+    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+    products Product[]
+
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+  
+    @@unique([storeId, name])
+    @@index([storeId])
+}
+
+model Product {
+    id String @id @default(uuid())
+    name String
+    description String?
+    sku String
+    barcode String?
+
+    costPrice Float
+    sellingPrice Float
+    taxable Boolean @default(true)
+
+    unit String @default("piece")
+    image String?
+
+    storeId String
+    store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+    categoryId String?
+    category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+    inventory Inventory[]
+    transactionItems TransactionItem[]
+
+    isActive Boolean @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([storeId, sku])
+    @@unique([storeId, barcode])
+    @@index([storeId])
+    @@index([barcode])
+}
+
+model Inventory {
+    id String @id @default(uuid())
+
+    productId String
+    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+    branchId String
+    branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+    quantity Int @default(0)
+    minStockLevel Int @default(10)
+    maxStockLevel Int?
+
+    location String?
+
+    lastRestocked DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([productId, branchId])
+    @@index([branchId])
+    @@index([productId])
+}
+
+model Transaction {
+    id String @id @default(uuid())
+    receiptNumber String @unique
+
+    branchId String
+    branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+    cashierId String
+    cashier User @relation(fields: [cashierId], references: [id])
+
+    customerId String?
+    customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+    Items TransactionItem[]
+
+    subtotal        Float
+    taxAmount       Float    @default(0)
+    discount        Float    @default(0)
+    total           Float
+  
+    // Payment
+    paymentMethod   PaymentMethod
+    amountPaid      Float
+    change          Float    @default(0)
+    
+    status          TransactionStatus @default(COMPLETED)
+    
+    notes           String?
+    
+    transactionDate DateTime @default(now())
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    
+    @@index([branchId])
+    @@index([cashierId])
+    @@index([transactionDate])
+    @@index([receiptNumber])
+    }
+
+model TransactionItem {
+    id              String      @id @default(uuid())
+    
+    transactionId   String
+    transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+    
+    productId       String
+    product         Product     @relation(fields: [productId], references: [id])
+    
+    quantity        Int
+    unitPrice       Float
+    discount        Float       @default(0)
+    total           Float
+    
+    createdAt       DateTime    @default(now())
+    
+    @@index([transactionId])
+    @@index([productId])
+}
+
+enum PaymentMethod {
+    CASH
+    CARD
+    MOBILE_MONEY
+    BANK_TRANSFER
+    SPLIT // Multiple methods
+}
+
+enum TransactionStatus {
+    COMPLETED
+    REFUNDED
+    CANCELLED
+    PENDING
+}
+
+// ==================== CUSTOMERS ====================
+
+model Customer {
+    id              String   @id @default(uuid())
+    name            String
+    email           String?
+    phone           String?
+    address         String?
+    
+    storeId         String
+    store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+    
+    transactions    Transaction[]
+    
+    loyaltyPoints   Int      @default(0)
+    
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    
+    @@index([storeId])
+    @@index([phone])
+}
+
+// ==================== SUPPLIERS ====================
+
+model Supplier {
+    id              String   @id @default(uuid())
+    name            String
+    email           String?
+    phone           String
+    address         String?
+    
+    storeId         String
+    store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+    
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    
+    @@index([storeId])
+}
+
+// ==================== ACTIVITY LOG ====================
+
+model ActivityLog {
+    id          String   @id @default(uuid())
+    
+    userId      String
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    action      String   // LOGIN, LOGOUT, CREATE_PRODUCT, etc.
+    entity      String?  // Product, Transaction, etc.
+    entityId    String?
+    details     Json?
+    ipAddress   String?
+    
+    createdAt   DateTime @default(now())
+    
+    @@index([userId])
+    @@index([createdAt])
+    }

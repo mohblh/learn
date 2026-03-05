@@ -1,0 +1,35 @@
+export const ROLES = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  STORE_OWNER: 'STORE_OWNER',
+  STORE_ADMIN: 'STORE_ADMIN',
+  BRANCH_MANAGER: 'BRANCH_MANAGER',
+  CASHIER: 'CASHIER',
+  INVENTORY_STAFF: 'INVENTORY_STAFF'
+};
+
+export const PAYMENT_METHODS = {
+  CASH: 'CASH',
+  CARD: 'CARD',
+  MOBILE_MONEY: 'MOBILE_MONEY',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  SPLIT: 'SPLIT'
+};
+
+export const TRANSACTION_STATUS = {
+  COMPLETED: 'COMPLETED',
+  REFUNDED: 'REFUNDED',
+  CANCELLED: 'CANCELLED',
+  PENDING: 'PENDING'
+};
+
+export const ROUTES = {
+  LOGIN: '/login',
+  DASHBOARD: '/dashboard',
+  POS: '/pos',
+  PRODUCTS: '/products',
+  INVENTORY: '/inventory',
+  TRANSACTIONS: '/transactions',
+  EMPLOYEES: '/employees',
+  REPORTS: '/reports',
+  SETTINGS: '/settings'
+};
